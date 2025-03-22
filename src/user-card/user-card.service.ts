@@ -1,5 +1,5 @@
-// src/user-card/user-card.service.ts
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+// src/user-card/user-card.service.ts (Updated)
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserCard } from './entities/user-card.entity';
@@ -24,6 +24,10 @@ export interface PaginatedResult<T> {
   };
 }
 
+// Valid page size options
+const VALID_PAGE_SIZES = [10, 20, 50];
+const DEFAULT_PAGE_SIZE = 10;
+
 @Injectable()
 export class UserCardService {
   constructor(
@@ -37,7 +41,11 @@ export class UserCardService {
     paginationParams?: PaginationParams
   ): Promise<PaginatedResult<UserCard>> {
     const page = paginationParams?.page || 1;
-    const limit = paginationParams?.limit || 10;
+    let limit = paginationParams?.limit || DEFAULT_PAGE_SIZE;
+    
+    // Validate and sanitize the limit parameter
+    limit = this.validatePageSize(limit);
+    
     const skip = (page - 1) * limit;
 
     const [items, totalItems] = await this.userCardRepository.findAndCount({
@@ -75,12 +83,22 @@ export class UserCardService {
     paginationParams?: PaginationParams
   ): Promise<PaginatedResult<UserCard>> {
     const page = paginationParams?.page || 1;
-    const limit = paginationParams?.limit || 10;
+    let limit = paginationParams?.limit || DEFAULT_PAGE_SIZE;
+    
+    // Validate and sanitize the limit parameter
+    limit = this.validatePageSize(limit);
+    
     const skip = (page - 1) * limit;
 
     const queryBuilder = this.userCardRepository.createQueryBuilder('userCard')
       .leftJoinAndSelect('userCard.card', 'card')
       .where('userCard.userId = :userId', { userId });
+    
+    // Filter by revealed status if provided
+    if (query.revealed !== undefined) {
+      const revealed = query.revealed === 'true' || query.revealed === true;
+      queryBuilder.andWhere('userCard.revealed = :revealed', { revealed });
+    }
     
     // Apply date filter for createdAt in yyyy-mm-dd format
     if (query.createdAt) {
@@ -202,7 +220,27 @@ export class UserCardService {
     const userCard = new UserCard();
     userCard.userId = userId;
     userCard.cardId = card.id;
+    userCard.revealed = false; // Default value, could also be omitted as entity has default
 
+    return this.userCardRepository.save(userCard);
+  }
+
+  async revealCard(currentUser: User, cardId: string): Promise<UserCard> {
+    const userCard = await this.userCardRepository.findOne({
+      where: { id: cardId },
+    });
+
+    if (!userCard) {
+      throw new NotFoundException('Card not found');
+    }
+
+    // Only admins or the card owner can reveal the card
+    if (currentUser.role !== Role.ADMIN && currentUser.id !== userCard.userId) {
+      throw new ForbiddenException('You do not have permission to reveal this card');
+    }
+
+    // Update the revealed status
+    userCard.revealed = true;
     return this.userCardRepository.save(userCard);
   }
 
@@ -222,5 +260,23 @@ export class UserCardService {
     }
 
     await this.userCardRepository.remove(card);
+  }
+
+  /**
+   * Validates the page size parameter to ensure it's one of the allowed values
+   * @param limit The requested page size
+   * @returns A valid page size (10, 20, or 50)
+   */
+  private validatePageSize(limit: number): number {
+    // Convert string to number if needed
+    const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+    
+    // Check if the limit is one of the valid options
+    if (isNaN(parsedLimit) || !VALID_PAGE_SIZES.includes(parsedLimit)) {
+      // Return default page size if invalid
+      return DEFAULT_PAGE_SIZE;
+    }
+    
+    return parsedLimit;
   }
 }

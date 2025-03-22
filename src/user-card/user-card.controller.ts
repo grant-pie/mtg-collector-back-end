@@ -1,11 +1,15 @@
-// src/user-card/user-card.controller.ts
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Req, Query, NotFoundException } from '@nestjs/common';
+// src/user-card/user-card.controller.ts (Updated)
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Req, Query, NotFoundException, Patch } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UserCardService, PaginationParams } from './user-card.service';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Role } from '../user/enums/role.enum';
 import { UserService } from '../user/user.service';
+
+// Valid page size options
+const VALID_PAGE_SIZES = [10, 20, 50];
+const DEFAULT_PAGE_SIZE = 10;
 
 @Controller('user-cards')
 export class UserCardController {
@@ -21,8 +25,15 @@ export class UserCardController {
   ) {
     // Extract pagination parameters
     const page = query.page ? parseInt(query.page, 10) : 1;
-    const limit = query.limit ? parseInt(query.limit, 10) : 10;
-    const paginationParams: PaginationParams = { page, limit };
+    const limit = query.limit ? parseInt(query.limit, 10) : DEFAULT_PAGE_SIZE;
+    
+    // Validate limit parameter
+    const validatedLimit = this.validatePageSize(limit);
+    
+    const paginationParams: PaginationParams = { 
+      page, 
+      limit: validatedLimit 
+    };
     
     // Remove pagination params from query to use for filtering
     const { page: _, limit: __, ...filterParams } = query;
@@ -47,6 +58,7 @@ export class UserCardController {
       id: userCard.id,
       userId: userCard.userId,
       cardDetails: userCard.card,
+      revealed: userCard.revealed,
       createdAt: userCard.createdAt
     }));
     
@@ -70,8 +82,15 @@ export class UserCardController {
     
     // Extract pagination parameters
     const page = query.page ? parseInt(query.page, 10) : 1;
-    const limit = query.limit ? parseInt(query.limit, 10) : 10;
-    const paginationParams: PaginationParams = { page, limit };
+    const limit = query.limit ? parseInt(query.limit, 10) : DEFAULT_PAGE_SIZE;
+    
+    // Validate limit parameter
+    const validatedLimit = this.validatePageSize(limit);
+    
+    const paginationParams: PaginationParams = { 
+      page, 
+      limit: validatedLimit 
+    };
     
     // Remove pagination params from query to use for filtering
     const { page: _, limit: __, ...filterParams } = query;
@@ -89,6 +108,7 @@ export class UserCardController {
       id: userCard.id,
       userId: userCard.userId,
       cardDetails: userCard.card,
+      revealed: userCard.revealed,
       createdAt: userCard.createdAt
     }));
     
@@ -118,7 +138,24 @@ export class UserCardController {
         id: userCard.id,
         userId: userCard.userId,
         cardId: userCard.cardId,
+        revealed: userCard.revealed,
         createdAt: userCard.createdAt
+      }
+    };
+  }
+
+  @Patch(':cardId/reveal')
+  @UseGuards(AuthGuard('jwt'))
+  async revealCard(@Req() req, @Param('cardId') cardId: string) {
+    const updatedCard = await this.userCardService.revealCard(req.user, cardId);
+    return { 
+      success: true, 
+      userCard: {
+        id: updatedCard.id,
+        userId: updatedCard.userId,
+        cardId: updatedCard.cardId,
+        revealed: updatedCard.revealed,
+        createdAt: updatedCard.createdAt
       }
     };
   }
@@ -128,5 +165,20 @@ export class UserCardController {
   async removeCard(@Req() req, @Param('cardId') cardId: string) {
     await this.userCardService.removeCardFromUser(req.user, cardId);
     return { success: true };
+  }
+
+  /**
+   * Validates the page size parameter to ensure it's one of the allowed values
+   * @param limit The requested page size
+   * @returns A valid page size (10, 20, or 50)
+   */
+  private validatePageSize(limit: number): number {
+    // Check if the limit is one of the valid options
+    if (isNaN(limit) || !VALID_PAGE_SIZES.includes(limit)) {
+      // Return default page size if invalid
+      return DEFAULT_PAGE_SIZE;
+    }
+    
+    return limit;
   }
 }

@@ -15,6 +15,9 @@ export class UserCard {
   @Column()
   cardId: string;
 
+  @Column({ default: false })
+  revealed: boolean;
+
   @ManyToOne(() => User, user => user.cards, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;

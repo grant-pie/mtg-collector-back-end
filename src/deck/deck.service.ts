@@ -81,6 +81,15 @@ export class DeckService {
     await this.deckRepository.remove(deck);
   }
 
+  async findByUserCardId(userCardId: string): Promise<Deck[]> {
+    // Using the query builder to properly query the many-to-many relationship
+    return this.deckRepository
+      .createQueryBuilder('deck')
+      .innerJoin('deck.userCards', 'userCard')
+      .where('userCard.id = :userCardId', { userCardId })
+      .getMany();
+  }
+
   async addUserCardToDeck(
     currentUser: User,
     deckId: string,

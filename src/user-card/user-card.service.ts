@@ -279,4 +279,22 @@ export class UserCardService {
     
     return parsedLimit;
   }
+
+  async transferCard(cardId: string, fromUserId: string, toUserId: string): Promise<UserCard> {
+    const userCard = await this.findById(cardId);
+    
+    if (!userCard) {
+      throw new NotFoundException(`UserCard with id ${cardId} not found`);
+    }
+    
+    if (userCard.userId !== fromUserId) {
+      throw new ForbiddenException(`Card with ID ${cardId} does not belong to user ${fromUserId}`);
+    }
+    
+    // Update the userId to transfer ownership
+    userCard.userId = toUserId;
+    
+    // Use the repository to save the entity instead of calling save() on the entity
+    return await this.userCardRepository.save(userCard);
+  }
 }

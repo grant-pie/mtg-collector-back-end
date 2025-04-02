@@ -3,6 +3,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 import { Role } from '../enums/role.enum';
 import { UserCard } from '../../user-card/entities/user-card.entity';
 import { Deck } from '../../deck/entities/deck.entity';
+import { Notification } from '../../notification/entities/notification.entity';
 
 @Entity('users')
 export class User {
@@ -39,6 +40,9 @@ export class User {
 
   @OneToMany(() => Deck, deck => deck.user)
   decks: Deck[];
+
+  @OneToMany(() => Notification, notification => notification.user)
+  notifications: Notification[];
 
   @CreateDateColumn()
   createdAt: Date;

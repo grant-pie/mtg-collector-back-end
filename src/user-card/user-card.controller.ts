@@ -18,6 +18,26 @@ export class UserCardController {
     private userService: UserService,
   ) {}
 
+  @Get(':id')
+  async getCardById(@Req() req, @Param('id') id: string) {
+    console.log('attempting to find card with id: ' + id);
+    const userCard = await this.userCardService.findById(id);
+    
+    if (!userCard) {
+      throw new NotFoundException(`Card with id ${id} not found`);
+    }
+    
+    return {
+      userCard: {
+        id: userCard.id,
+        userId: userCard.userId,
+        cardDetails: userCard.card,
+        revealed: userCard.revealed,
+        createdAt: userCard.createdAt
+      }
+    };
+  }
+
   @Get('username/:username')
   async getCardsByUsername(
     @Param('username') username: string, 
@@ -67,8 +87,8 @@ export class UserCardController {
       pagination: response.meta
     };
   }
-
-  @Get(':userId')
+  
+  @Get('user/:userId')
   @UseGuards(AuthGuard('jwt'))
   async getUserCards(
     @Req() req, 

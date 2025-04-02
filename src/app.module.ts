@@ -9,6 +9,8 @@ import { getDatabaseConfig } from './config/database.config';
 import { UserCardModule } from './user-card/user-card.module';
 import { DeckModule } from './deck/deck.module';
 import { CardModule } from './card/card.module';
+import { NotificationModule } from './notification/notification.module';
+import { TradeModule } from './trade/trade.module';
 
 
 
@@ -27,6 +29,8 @@ import { CardModule } from './card/card.module';
     UserCardModule,
     DeckModule,
     CardModule,
+    NotificationModule,
+    TradeModule
   ],
   controllers: [AppController],
   providers: [AppService],

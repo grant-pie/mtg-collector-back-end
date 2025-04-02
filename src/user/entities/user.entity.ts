@@ -4,6 +4,7 @@ import { Role } from '../enums/role.enum';
 import { UserCard } from '../../user-card/entities/user-card.entity';
 import { Deck } from '../../deck/entities/deck.entity';
 import { Notification } from '../../notification/entities/notification.entity';
+import { RefreshToken } from '../../auth/entities/refresh-token.entity';
 
 @Entity('users')
 export class User {
@@ -43,6 +44,9 @@ export class User {
 
   @OneToMany(() => Notification, notification => notification.user)
   notifications: Notification[];
+
+  @OneToMany(() => RefreshToken, refreshToken => refreshToken.user)
+  refreshTokens: RefreshToken[];
 
   @CreateDateColumn()
   createdAt: Date;

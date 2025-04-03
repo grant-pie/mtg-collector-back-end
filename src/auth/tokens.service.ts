@@ -19,28 +19,38 @@ export class TokensService {
     userAgent?: string,
     ipAddress?: string,
   ): Promise<RefreshToken> {
-    // Create expiry time - 30 days for remember me, 2 days otherwise
-    const expiresAt = new Date();
-    expiresAt.setTime(
-      expiresAt.getTime() + 
-      (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 24 * 60 * 60 * 1000)
-    );
-
-    // Generate unique token
-    const token = uuidv4();
-    
-    // Create new refresh token entity
-    const refreshToken = this.refreshTokenRepository.create({
-      token,
-      expiresAt,
-      userAgent,
-      ipAddress,
-      user,
-      userId: user.id,
-    });
-
-    // Save to database
-    return this.refreshTokenRepository.save(refreshToken);
+    try {
+      // Create expiry time - 30 days for remember me, 2 days otherwise
+      const expiresAt = new Date();
+      expiresAt.setTime(
+        expiresAt.getTime() + 
+        (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 2 * 24 * 60 * 60 * 1000)
+      );
+  
+      // Generate unique token
+      const token = uuidv4();
+      
+      console.log('Creating refresh token for user:', user.id, 'rememberMe:', rememberMe);
+      
+      // Create new refresh token entity
+      const refreshToken = this.refreshTokenRepository.create({
+        token,
+        expiresAt,
+        userAgent,
+        ipAddress,
+        user,
+        userId: user.id,
+      });
+  
+      // Save to database
+      console.log('Attempting to save refresh token to database');
+      const savedToken = await this.refreshTokenRepository.save(refreshToken);
+      console.log('Successfully saved refresh token');
+      return savedToken;
+    } catch (error) {
+      console.error('Error generating refresh token:', error);
+      throw error;
+    }
   }
 
   async validateRefreshToken(token: string): Promise<RefreshToken | null> {

@@ -11,45 +11,52 @@ export class AuthService {
   ) {}
 
   async login(user: User, rememberMe: boolean = false, userAgent?: string, ipAddress?: string) {
-    // Create JWT payload
-    const payload = { 
-      sub: user.id,
-      email: user.email,
-      role: user.role
-    };
-    
-    // Generate access token with the same 1d expiry as in your JWT module
-    const accessToken = this.jwtService.sign(payload);
-    
-    // Generate refresh token if remember me is enabled
-    // Use string | null type to avoid type error
-    let refreshToken: string | null = null;
-    
-    if (rememberMe) {
-      const refreshTokenEntity = await this.tokensService.generateRefreshToken(
-        user,
-        true, 
-        userAgent,
-        ipAddress
-      );
-      refreshToken = refreshTokenEntity.token;
-    }
-    
-    // Return the same structure as your existing service but with refresh token
-    return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
-      user: {
-        id: user.id,
+    try {
+      // Create JWT payload
+      const payload = { 
+        sub: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        picture: user.picture,
-        username: user.username,
-        role: user.role,
-      },
-      rememberMe,
-    };
+        role: user.role
+      };
+      
+      // Generate access token with the same 1d expiry as in your JWT module
+      const accessToken = this.jwtService.sign(payload);
+      
+      // Generate refresh token if remember me is enabled
+      // Use string | null type to avoid type error
+      let refreshToken: string | null = null;
+      
+      console.log('Login called with rememberMe:', rememberMe);
+      
+      if (rememberMe) {
+        const refreshTokenEntity = await this.tokensService.generateRefreshToken(
+          user,
+          true, 
+          userAgent,
+          ipAddress
+        );
+        refreshToken = refreshTokenEntity.token;
+      }
+      
+      // Return the same structure as your existing service but with refresh token
+      return {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          picture: user.picture,
+          username: user.username,
+          role: user.role,
+        },
+        rememberMe,
+      };
+    } catch (error) {
+      console.error('Error in login method:', error);
+      throw error;
+    }
   }
   
   async refreshTokens(refreshToken: string, userAgent?: string, ipAddress?: string) {

@@ -36,7 +36,7 @@ export class AuthController {
     
     // Manually build the Google OAuth URL with state
     const clientID = this.configService.get('GOOGLE_CLIENT_ID');
-    const redirectURI = encodeURIComponent(this.configService.get('GOOGLE_CALLBACK_URL'));
+    const redirectURI = encodeURIComponent(this.configService.get('GOOGLE_CALLBACK_URL') || '');
     const googleOAuthUrl = 
       `https://accounts.google.com/o/oauth2/v2/auth?` +
       `response_type=code&` +

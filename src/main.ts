@@ -9,25 +9,42 @@ async function bootstrap() {
   // Get ConfigService
   const configService = app.get(ConfigService);
   
-  // Enable CORS with existing configuration
+  // Determine environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  // Enable CORS with proper configuration for HTTP/HTTPS scenarios
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true,
+    origin: [
+      configService.get('FRONTEND_URL'),
+      "https://grant-pie.github.io"
+      // Add any additional origins you need
+    ],
+    credentials: true, // Essential for cookies to work cross-domain
   });
   
-  // Add session middleware
+  // Add session middleware with improved configuration
   app.use(
     session({
       secret: configService.get('SESSION_SECRET') || 'remember-me-session-secret',
       resave: false,
       saveUninitialized: false,
       cookie: { 
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 60000, // 1 minute - just needed for OAuth flow
+        secure: isProduction, // Only require HTTPS in production
+        httpOnly: true,
+        maxAge: 60000 * 5, // Increase to 5 minutes to cover the entire OAuth flow
+        sameSite: isProduction ? 'none' : 'lax', // 'none' allows cookies in cross-site requests (needed for HTTPS)
       }
     }),
   );
   
-  await app.listen(process.env.PORT ?? 3001);
+  // Optional: Add global prefix if you want all endpoints to be under /api
+  // app.setGlobalPrefix('api');
+  
+  await app.listen(configService.get('PORT') ?? 3001);
+  
+  console.log(`Application is running on: ${await app.getUrl()}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Session cookie secure: ${isProduction}`);
+  console.log(`Session cookie sameSite: ${isProduction ? 'none' : 'lax'}`);
 }
 bootstrap();

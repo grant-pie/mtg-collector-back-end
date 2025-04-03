@@ -26,7 +26,7 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Req() req, @Res() res: Response) {
     // Get remember me preference from session or default to false
-    const rememberMe = req.session?.rememberMe || false;
+    const rememberMe = true;
     
     // Get auth result with token and user info, passing the remember me preference
     const authResult = await this.authService.login(
@@ -42,9 +42,10 @@ export class AuthController {
     }
     
     // Encode the entire auth result object to pass to frontend
+    // This maintains your existing pattern of passing data via URL
     const encodedData = encodeURIComponent(JSON.stringify(authResult));
     
-    // Redirect directly to the callback page - make sure this matches your Vue router path
+    // Redirect to frontend with encoded data
     return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?data=${encodedData}`);
   }
 

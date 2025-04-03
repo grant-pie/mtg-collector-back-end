@@ -42,10 +42,9 @@ export class AuthController {
     }
     
     // Encode the entire auth result object to pass to frontend
-    // This maintains your existing pattern of passing data via URL
     const encodedData = encodeURIComponent(JSON.stringify(authResult));
     
-    // Redirect to frontend with encoded data
+    // Redirect directly to the callback page - make sure this matches your Vue router path
     return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?data=${encodedData}`);
   }
 

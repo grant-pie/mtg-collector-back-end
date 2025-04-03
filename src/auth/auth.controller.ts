@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Req, Res, UseGuards, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, UseGuards, Body, Query, Redirect } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
+import { generateStateParameter, validateStateParameter } from './auth.utils';
 
 @Controller('auth')
 export class AuthController {
@@ -11,63 +12,76 @@ export class AuthController {
     private readonly configService: ConfigService
   ) {}
 
-  // New endpoint to set remember me preference
+  // Remember me preference endpoint
   @Post('remember-me')
   async setRememberMe(@Body() body: { rememberMe: boolean }, @Req() req) {
-    // Store in session
     req.session = req.session || {};
     req.session.rememberMe = body.rememberMe;
     console.log('Remember me preference set in session:', req.session.rememberMe);
     return { success: true };
   }
 
+  // This is a middleware function to handle Google auth with custom state
   @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleAuth(@Req() req, @Query('remember_me') rememberMeParam) {
-    console.log('Starting Google OAuth flow');
-    
-    // Get remember me preference from query param
+  googleAuth(@Query('remember_me') rememberMeParam, @Res() res: Response) {
     const rememberMe = rememberMeParam === 'true';
     console.log('Remember me from URL param:', rememberMe);
     
-    // Pass the remember me preference in the state parameter
-    // This is more reliable than sessions across OAuth redirects
-    return {
-      state: JSON.stringify({ rememberMe })
-    };
+    // Generate state parameter with remember me preference
+    const state = generateStateParameter(rememberMe);
+    
+    // Get redirect URL from environment
+    const googleAuthUrl = this.configService.get('GOOGLE_AUTH_URL') || 
+      `${this.configService.get('API_URL')}/auth/google/redirect`;
+    
+    // Manually build the Google OAuth URL with state
+    const clientID = this.configService.get('GOOGLE_CLIENT_ID');
+    const redirectURI = encodeURIComponent(this.configService.get('GOOGLE_CALLBACK_URL'));
+    const googleOAuthUrl = 
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `response_type=code&` +
+      `client_id=${clientID}&` +
+      `scope=email%20profile&` +
+      `redirect_uri=${redirectURI}&` +
+      `state=${state}`;
+    
+    // Redirect to Google OAuth with state parameter
+    return res.redirect(googleOAuthUrl);
   }
 
+  // Passport redirects to this endpoint
+  @Get('google/redirect')
+  @UseGuards(AuthGuard('google'))
+  async googleRedirect() {
+    // This is just a placeholder - Passport will handle the OAuth
+    return { msg: 'Google Authentication' };
+  }
+
+  // Google OAuth callback
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleAuthCallback(@Req() req, @Res() res: Response) {
+  async googleAuthCallback(@Req() req, @Res() res: Response, @Query('state') state) {
     console.log('Google callback received');
-    console.log('Session in callback:', req.session);
     
-    // Get remember me preference with multiple fallbacks
+    // Get remember me preference from state parameter
     let rememberMe = false;
     
-    // Debug the session more thoroughly
-    if (req.session) {
-      console.log('Session exists with keys:', Object.keys(req.session));
-      if ('rememberMe' in req.session) {
-        console.log('rememberMe found in session:', req.session.rememberMe);
-      } else {
-        console.log('rememberMe NOT found in session');
+    if (state) {
+      const stateRememberMe = validateStateParameter(state);
+      if (stateRememberMe !== null) {
+        rememberMe = stateRememberMe;
+        console.log('Using remember me from state parameter:', rememberMe);
       }
     }
     
-    // Check URL parameters as first priority (more reliable than session in OAuth flows)
-    if (req.query.remember_me !== undefined) {
-      rememberMe = req.query.remember_me === 'true';
-      console.log('Using remember me from query param:', rememberMe);
-    }
-    // Then try to get from session
-    else if (req.session && req.session.rememberMe !== undefined) {
+    // Fallback to session if state validation failed
+    if (rememberMe === false && req.session?.rememberMe !== undefined) {
       rememberMe = req.session.rememberMe;
       console.log('Using remember me from session:', rememberMe);
-    } 
-    // Use environment-based default as last resort
-    else {
+    }
+    
+    // Final fallback to environment-based default
+    if (rememberMe === false) {
       const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
       rememberMe = isProduction; // Default to true in production, false in dev
       console.log('Using environment-based default for remember me:', rememberMe);
@@ -75,7 +89,7 @@ export class AuthController {
     
     console.log('Final remember me value:', rememberMe);
     
-    // Get auth result with token and user info, passing the remember me preference
+    // Get auth result with token and user info
     const authResult = await this.authService.login(
       req.user,
       rememberMe,
@@ -91,7 +105,7 @@ export class AuthController {
     // Encode the entire auth result object to pass to frontend
     const encodedData = encodeURIComponent(JSON.stringify(authResult));
     
-    // Redirect directly to the callback page
+    // Redirect to the frontend callback
     return res.redirect(`${this.configService.get('FRONTEND_URL')}/auth/callback?data=${encodedData}`);
   }
 
@@ -101,7 +115,6 @@ export class AuthController {
     return req.user;
   }
 
-  // New endpoint to refresh tokens
   @Post('refresh-token')
   async refreshToken(@Req() req) {
     const refreshToken = req.body.refreshToken;
@@ -129,7 +142,6 @@ export class AuthController {
     }
   }
 
-  // New endpoint for logout
   @Post('logout')
   @UseGuards(AuthGuard('jwt'))
   async logout(@Req() req) {

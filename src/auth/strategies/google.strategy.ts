@@ -10,21 +10,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     private readonly configService: ConfigService,
     private readonly userService: UserService,
   ) {
-    // ...existing code...
-    
     const options: StrategyOptions = {
       clientID: configService.get<string>('GOOGLE_CLIENT_ID') || '',
       clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET') || '',
       callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL'),
       scope: ['email', 'profile'],
-      // Enable state verification
-      state: true
+      // We'll handle state manually
+      passReqToCallback: true,
     };
     
-    super(options);
+    super(options as any);
   }
 
   async validate(
+    request: any,
     accessToken: string,
     refreshToken: string,
     profile: Profile,

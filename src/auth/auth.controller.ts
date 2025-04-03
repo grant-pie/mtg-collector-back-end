@@ -26,39 +26,47 @@ export class AuthController {
   googleAuth(@Req() req, @Query('remember_me') rememberMeParam) {
     console.log('Starting Google OAuth flow');
     
-    // Initialize session if needed
-    req.session = req.session || {};
+    // Get remember me preference from query param
+    const rememberMe = rememberMeParam === 'true';
+    console.log('Remember me from URL param:', rememberMe);
     
-    // If remember_me param is provided in URL, use it
-    if (rememberMeParam !== undefined) {
-      req.session.rememberMe = rememberMeParam === 'true';
-      console.log('Remember me set from URL parameter:', req.session.rememberMe);
-    }
-    
-    console.log('Session state at Google auth start:', req.session);
-    // This route initiates Google OAuth
+    // Pass the remember me preference in the state parameter
+    // This is more reliable than sessions across OAuth redirects
+    return {
+      state: JSON.stringify({ rememberMe })
+    };
   }
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleAuthCallback(@Req() req, @Res() res: Response, @Query('state') state) {
+  async googleAuthCallback(@Req() req, @Res() res: Response) {
     console.log('Google callback received');
     console.log('Session in callback:', req.session);
     
     // Get remember me preference with multiple fallbacks
     let rememberMe = false;
     
-    // 1. Try to get from session
-    if (req.session && req.session.rememberMe !== undefined) {
-      rememberMe = req.session.rememberMe;
-      console.log('Using remember me from session:', rememberMe);
-    } 
-    // 2. Check URL parameters
-    else if (req.query.remember_me !== undefined) {
+    // Debug the session more thoroughly
+    if (req.session) {
+      console.log('Session exists with keys:', Object.keys(req.session));
+      if ('rememberMe' in req.session) {
+        console.log('rememberMe found in session:', req.session.rememberMe);
+      } else {
+        console.log('rememberMe NOT found in session');
+      }
+    }
+    
+    // Check URL parameters as first priority (more reliable than session in OAuth flows)
+    if (req.query.remember_me !== undefined) {
       rememberMe = req.query.remember_me === 'true';
       console.log('Using remember me from query param:', rememberMe);
     }
-    // 3. Use environment-based default as last resort
+    // Then try to get from session
+    else if (req.session && req.session.rememberMe !== undefined) {
+      rememberMe = req.session.rememberMe;
+      console.log('Using remember me from session:', rememberMe);
+    } 
+    // Use environment-based default as last resort
     else {
       const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
       rememberMe = isProduction; // Default to true in production, false in dev

@@ -10,26 +10,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     private readonly configService: ConfigService,
     private readonly userService: UserService,
   ) {
-    // Determine the environment
-    const isProduction = configService.get<string>('NODE_ENV') === 'production';
-    
-    // Get the appropriate callback URL based on environment
-    let callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL');
-    
-    // If we have environment-specific callback URLs defined, use them
-    if (isProduction && configService.get<string>('GOOGLE_CALLBACK_URL_PROD')) {
-      callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL_PROD');
-    } else if (!isProduction && configService.get<string>('GOOGLE_CALLBACK_URL_DEV')) {
-      callbackURL = configService.get<string>('GOOGLE_CALLBACK_URL_DEV');
-    }
+    // ...existing code...
     
     const options: StrategyOptions = {
       clientID: configService.get<string>('GOOGLE_CLIENT_ID') || '',
       clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET') || '',
-      callbackURL,
+      callbackURL: configService.get<string>('GOOGLE_CALLBACK_URL'),
       scope: ['email', 'profile'],
-      // Add state parameter support for passing remember me preference
-      // This allows us to store state between requests
+      // Enable state verification
       state: true
     };
     

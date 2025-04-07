@@ -180,6 +180,11 @@ export class UserCardService {
       queryBuilder.andWhere('card.text LIKE :text', { text: `%${query.text}%` });
     }
 
+    // Filter cards that are flagged as willing to trade
+    if (query.willingToTrade) {
+      queryBuilder.andWhere('card.willingToTrade = :willingToTrade', { text: `%${query.willingToTrade}%` });
+    }
+
     // Order results
     if (query.orderBy) {
       const direction = query.orderDirection === 'DESC' ? 'DESC' : 'ASC';
@@ -241,6 +246,25 @@ export class UserCardService {
 
     // Update the revealed status
     userCard.revealed = true;
+    return this.userCardRepository.save(userCard);
+  }
+
+  async setWillingToTrade(currentUser: User, cardId: string, willingToTrade: boolean): Promise<UserCard> {
+    const userCard = await this.userCardRepository.findOne({
+      where: { id: cardId },
+    });
+
+    if (!userCard) {
+      throw new NotFoundException('Card not found');
+    }
+
+    // Only admins or the card owner can reveal the card
+    if (currentUser.role !== Role.ADMIN && currentUser.id !== userCard.userId) {
+      throw new ForbiddenException('You do not have permission to reveal this card');
+    }
+
+    // Update the revealed status
+    userCard.willingToTrade = willingToTrade;
     return this.userCardRepository.save(userCard);
   }
 

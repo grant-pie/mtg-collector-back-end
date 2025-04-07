@@ -70,24 +70,24 @@ export class AuthController {
       const stateRememberMe = validateStateParameter(state);
       if (stateRememberMe !== null) {
         rememberMe = stateRememberMe;
-        console.log('Using remember me from state parameter:', rememberMe);
+        //console.log('Using remember me from state parameter:', rememberMe);
       }
     }
     
     // Fallback to session if state validation failed
     if (rememberMe === false && req.session?.rememberMe !== undefined) {
       rememberMe = req.session.rememberMe;
-      console.log('Using remember me from session:', rememberMe);
+      //console.log('Using remember me from session:', rememberMe);
     }
     
     // Final fallback to environment-based default
     if (rememberMe === false) {
       const isProduction = this.configService.get<string>('NODE_ENV') === 'production';
       rememberMe = isProduction; // Default to true in production, false in dev
-      console.log('Using environment-based default for remember me:', rememberMe);
+      //console.log('Using environment-based default for remember me:', rememberMe);
     }
     
-    console.log('Final remember me value:', rememberMe);
+    //console.log('Final remember me value:', rememberMe);
     
     // Get auth result with token and user info
     const authResult = await this.authService.login(

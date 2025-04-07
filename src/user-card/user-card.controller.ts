@@ -33,6 +33,7 @@ export class UserCardController {
         userId: userCard.userId,
         cardDetails: userCard.card,
         revealed: userCard.revealed,
+        willingToTrade: userCard.willingToTrade,
         createdAt: userCard.createdAt
       }
     };
@@ -79,6 +80,7 @@ export class UserCardController {
       userId: userCard.userId,
       cardDetails: userCard.card,
       revealed: userCard.revealed,
+      willingToTrade: userCard.willingToTrade,
       createdAt: userCard.createdAt
     }));
     
@@ -129,6 +131,7 @@ export class UserCardController {
       userId: userCard.userId,
       cardDetails: userCard.card,
       revealed: userCard.revealed,
+      willingToTrade: userCard.willingToTrade,
       createdAt: userCard.createdAt
     }));
     
@@ -159,6 +162,7 @@ export class UserCardController {
         userId: userCard.userId,
         cardId: userCard.cardId,
         revealed: userCard.revealed,
+        willingToTrade: userCard.willingToTrade,
         createdAt: userCard.createdAt
       }
     };
@@ -175,6 +179,29 @@ export class UserCardController {
         userId: updatedCard.userId,
         cardId: updatedCard.cardId,
         revealed: updatedCard.revealed,
+        willingToTrade: updatedCard.willingToTrade,
+        createdAt: updatedCard.createdAt
+      }
+    };
+  }
+
+  @Patch(':cardId/trade-willing')
+  @UseGuards(AuthGuard('jwt'))
+  async setWillingToTrade(
+    @Req() req, 
+    @Param('cardId') cardId: string,
+    @Body() body: {willingToTrade: boolean }) {
+    console.log('attempting to set willing to trade')
+    const updatedCard = await this.userCardService.setWillingToTrade(req.user, cardId, body.willingToTrade);
+    console.log( updatedCard);
+    return { 
+      success: true, 
+      userCard: {
+        id: updatedCard.id,
+        userId: updatedCard.userId,
+        cardId: updatedCard.cardId,
+        revealed: updatedCard.revealed,
+        willingToTrade: updatedCard.willingToTrade,
         createdAt: updatedCard.createdAt
       }
     };

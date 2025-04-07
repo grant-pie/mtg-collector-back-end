@@ -180,11 +180,12 @@ export class UserCardService {
       queryBuilder.andWhere('card.text LIKE :text', { text: `%${query.text}%` });
     }
 
-    // Filter cards that are flagged as willing to trade
-    if (query.willingToTrade) {
-      queryBuilder.andWhere('card.willingToTrade = :willingToTrade', { text: `%${query.willingToTrade}%` });
+    // Filter by willingToTrade status if provided
+    if (query.willingToTrade !== undefined) {
+      const willingToTrade = query.willingToTrade === 'true' || query.willingToTrade === true;
+      queryBuilder.andWhere('userCard.willingToTrade = :willingToTrade', { willingToTrade });
     }
-
+    
     // Order results
     if (query.orderBy) {
       const direction = query.orderDirection === 'DESC' ? 'DESC' : 'ASC';

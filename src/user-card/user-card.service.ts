@@ -287,11 +287,6 @@ export class UserCardService {
     await this.userCardRepository.remove(card);
   }
 
-  /**
-   * Validates the page size parameter to ensure it's one of the allowed values
-   * @param limit The requested page size
-   * @returns A valid page size (10, 20, or 50)
-   */
   private validatePageSize(limit: number): number {
     // Convert string to number if needed
     const parsedLimit = typeof limit === 'string' ? parseInt(limit, 10) : limit;
@@ -321,5 +316,114 @@ export class UserCardService {
     
     // Use the repository to save the entity instead of calling save() on the entity
     return await this.userCardRepository.save(userCard);
+  }
+
+  async findAllWillingToTrade(
+    query: any,
+    paginationParams?: PaginationParams
+  ): Promise<PaginatedResult<UserCard>> {
+    const page = paginationParams?.page || 1;
+    let limit = paginationParams?.limit || DEFAULT_PAGE_SIZE;
+    
+    // Validate and sanitize the limit parameter
+    limit = this.validatePageSize(limit);
+    
+    const skip = (page - 1) * limit;
+  
+    const queryBuilder = this.userCardRepository.createQueryBuilder('userCard')
+      .leftJoinAndSelect('userCard.card', 'card')
+      .leftJoinAndSelect('userCard.user', 'user')
+      .where('userCard.willingToTrade = :willingToTrade', { willingToTrade: true });
+    
+    // Apply filters based on card properties (similar to searchUserCards)
+    if (query.name) {
+      queryBuilder.andWhere('card.name LIKE :name', { name: `%${query.name}%` });
+    }
+    
+    if (query.type) {
+      queryBuilder.andWhere('card.type LIKE :type', { type: `%${query.type}%` });
+    }
+    
+    if (query.colors) {
+      const colors = Array.isArray(query.colors) ? query.colors : [query.colors];
+      colors.forEach((color, index) => {
+        queryBuilder.andWhere(`card.colors LIKE :color${index}`, { [`color${index}`]: `%${color}%` });
+      });
+    }
+    
+    if (query.rarity) {
+      queryBuilder.andWhere('card.rarity = :rarity', { rarity: query.rarity });
+    }
+    
+    if (query.set) {
+      queryBuilder.andWhere('card.set = :set', { set: query.set });
+    }
+    
+    if (query.manaCost) {
+      queryBuilder.andWhere('card.manaCost LIKE :manaCost', { manaCost: `%${query.manaCost}%` });
+    }
+    
+    if (query.artist) {
+      queryBuilder.andWhere('card.artist LIKE :artist', { artist: `%${query.artist}%` });
+    }
+    
+    // Convert mana cost filter to number for comparison
+    if (query.convertedManaCost) {
+      queryBuilder.andWhere('card.convertedManaCost = :cmc', { cmc: Number(query.convertedManaCost) });
+    }
+    
+    // Filter for cards with power equal to or greater than specified
+    if (query.minPower) {
+      queryBuilder.andWhere('CAST(card.power AS DECIMAL) >= :minPower', { minPower: Number(query.minPower) });
+    }
+    
+    // Filter for cards with toughness equal to or greater than specified
+    if (query.minToughness) {
+      queryBuilder.andWhere('CAST(card.toughness AS DECIMAL) >= :minToughness', { minToughness: Number(query.minToughness) });
+    }
+    
+    // Advanced text search in card text
+    if (query.text) {
+      queryBuilder.andWhere('card.text LIKE :text', { text: `%${query.text}%` });
+    }
+    
+    // Filter by username if provided
+    if (query.username) {
+      queryBuilder.andWhere('user.username LIKE :username', { username: `%${query.username}%` });
+    }
+    
+    // Order results
+    if (query.orderBy) {
+      const direction = query.orderDirection === 'DESC' ? 'DESC' : 'ASC';
+      if (query.orderBy.startsWith('card.')) {
+        // If the orderBy already includes the table prefix
+        queryBuilder.orderBy(query.orderBy, direction);
+      } else if (query.orderBy.startsWith('user.')) {
+        // If ordering by user fields
+        queryBuilder.orderBy(query.orderBy, direction);
+      } else {
+        // Default to ordering by card fields
+        queryBuilder.orderBy(`card.${query.orderBy}`, direction);
+      }
+    } else {
+      queryBuilder.orderBy('userCard.createdAt', 'DESC');
+    }
+    
+    // Apply pagination
+    queryBuilder.skip(skip).take(limit);
+    
+    // Get results and count
+    const [items, totalItems] = await queryBuilder.getManyAndCount();
+    
+    return {
+      items,
+      meta: {
+        totalItems,
+        itemCount: items.length,
+        itemsPerPage: limit,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+      },
+    };
   }
 }

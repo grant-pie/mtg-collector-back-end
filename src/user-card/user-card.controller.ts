@@ -214,11 +214,6 @@ export class UserCardController {
     return { success: true };
   }
 
-  /**
-   * Validates the page size parameter to ensure it's one of the allowed values
-   * @param limit The requested page size
-   * @returns A valid page size (10, 20, or 50)
-   */
   private validatePageSize(limit: number): number {
     // Check if the limit is one of the valid options
     if (isNaN(limit) || !VALID_PAGE_SIZES.includes(limit)) {
@@ -227,5 +222,42 @@ export class UserCardController {
     }
     
     return limit;
+  }
+
+  @Get('trading/marketplace')
+  async getTradingMarketplace(@Query() query) {
+    // Extract pagination parameters
+    const page = query.page ? parseInt(query.page, 10) : 1;
+    const limit = query.limit ? parseInt(query.limit, 10) : DEFAULT_PAGE_SIZE;
+    
+    // Validate limit parameter
+    const validatedLimit = this.validatePageSize(limit);
+    
+    const paginationParams: PaginationParams = { 
+      page, 
+      limit: validatedLimit 
+    };
+    
+    // Remove pagination params from query to use for filtering
+    const { page: _, limit: __, ...filterParams } = query;
+    
+    // Get all cards willing to trade with search parameters
+    const response = await this.userCardService.findAllWillingToTrade(filterParams, paginationParams);
+    
+    // Format the response to include card details and user information
+    const tradingCards = response.items.map(userCard => ({
+      id: userCard.id,
+      userId: userCard.userId,
+      username: userCard.user?.username,
+      cardDetails: userCard.card,
+      revealed: userCard.revealed,
+      willingToTrade: userCard.willingToTrade,
+      createdAt: userCard.createdAt
+    }));
+    
+    return { 
+      tradingCards,
+      pagination: response.meta
+    };
   }
 }

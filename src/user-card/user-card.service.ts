@@ -136,6 +136,10 @@ export class UserCardService {
     if (query.type) {
       queryBuilder.andWhere('card.type ILIKE :type', { type: `%${query.type}%` });
     }
+
+    if (query.hideBasicLands === 'true' || query.hideBasicLands === true) {
+      queryBuilder.andWhere('card.type NOT ILIKE :basicLandType', { basicLandType: '%Basic Land%' });
+    }
     
     if (query.colors) {
       const colors = Array.isArray(query.colors) ? query.colors : [query.colors];
@@ -349,6 +353,10 @@ export class UserCardService {
       colors.forEach((color, index) => {
         queryBuilder.andWhere(`card.colors LIKE :color${index}`, { [`color${index}`]: `%${color}%` });
       });
+    }
+
+    if (query.hideBasicLands === 'true' || query.hideBasicLands === true) {
+      queryBuilder.andWhere('card.type NOT LIKE :basicLandType', { basicLandType: '%Basic Land%' });
     }
     
     if (query.rarity) {

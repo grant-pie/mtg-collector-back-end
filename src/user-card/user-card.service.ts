@@ -130,11 +130,11 @@ export class UserCardService {
     
     // Apply filters based on card properties
     if (query.name) {
-      queryBuilder.andWhere('card.name LIKE :name', { name: `%${query.name}%` });
+      queryBuilder.andWhere('card.name ILIKE :name', { name: `%${query.name}%` });
     }
     
     if (query.type) {
-      queryBuilder.andWhere('card.type LIKE :type', { type: `%${query.type}%` });
+      queryBuilder.andWhere('card.type ILIKE :type', { type: `%${query.type}%` });
     }
     
     if (query.colors) {

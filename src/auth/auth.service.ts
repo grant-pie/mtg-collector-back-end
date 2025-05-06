@@ -80,7 +80,9 @@ export class AuthService {
     };
     
     // Generate new access token
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload, { 
+      expiresIn: '7d' // or whatever duration you want
+    });
     
     // Generate new refresh token
     const newRefreshTokenEntity = await this.tokensService.generateRefreshToken(

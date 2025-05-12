@@ -20,7 +20,9 @@ export class AuthService {
       };
       
       // Generate access token with the same 1d expiry as in your JWT module
-      const accessToken = this.jwtService.sign(payload);
+      const accessToken = this.jwtService.sign(payload, {
+        expiresIn: rememberMe ? '7d' : '1d'
+      });
       
       // Generate refresh token if remember me is enabled
       // Use string | null type to avoid type error

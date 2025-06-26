@@ -5,6 +5,7 @@ import { UserCard } from '../../user-card/entities/user-card.entity';
 import { Deck } from '../../deck/entities/deck.entity';
 import { Notification } from '../../notification/entities/notification.entity';
 import { RefreshToken } from '../../auth/entities/refresh-token.entity';
+import { TournamentResult } from '../../tournament/entities/tournament-result.entity';
 
 @Entity('users')
 export class User {
@@ -47,6 +48,9 @@ export class User {
 
   @OneToMany(() => RefreshToken, refreshToken => refreshToken.user)
   refreshTokens: RefreshToken[];
+
+  @OneToMany(() => TournamentResult, result => result.user)
+  tournamentResults: TournamentResult[];
 
   @CreateDateColumn()
   createdAt: Date;

@@ -11,7 +11,7 @@ import { DeckModule } from './deck/deck.module';
 import { CardModule } from './card/card.module';
 import { NotificationModule } from './notification/notification.module';
 import { TradeModule } from './trade/trade.module';
-
+import { TournamentModule } from './tournament/tournament.module';
 
 
 @Module({
@@ -30,7 +30,8 @@ import { TradeModule } from './trade/trade.module';
     DeckModule,
     CardModule,
     NotificationModule,
-    TradeModule
+    TradeModule,
+    TournamentModule
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -10,4 +10,7 @@ export const getDatabaseConfig = (configService: ConfigService): DataSourceOptio
   database: configService.get('DB_DATABASE', 'nestjs'),
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: configService.get('NODE_ENV') !== 'production',
+  // Add migration support for when you need it later
+  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+  migrationsRun: false, // Set to true if you want migrations to run automatically
 });
